@@ -73,4 +73,27 @@ module.exports = (app) => {
             next(err);
         }
     });
+    app.get('/customer/cart', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetCart(_id);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/customer/order', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { order } = req.body;
+
+            const { data } = await service.PlaceOrder(_id, order);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
 };
