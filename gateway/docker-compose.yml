@@ -1,0 +1,15 @@
+services:
+  gateway:
+    container_name: c-gateway
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      CUSTOMERS_URL: ${CUSTOMERS_URL:-http://host.docker.internal:8003}
+      PRODUCTS_URL: ${PRODUCTS_URL:-http://host.docker.internal:8002}
+      SHOPPING_URL: ${SHOPPING_URL:-http://host.docker.internal:8004}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

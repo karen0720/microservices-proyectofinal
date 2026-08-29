@@ -1,0 +1,13 @@
+services:
+  shopping:
+    container_name: c-shopping
+    build: .
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: 8004
+      CUSTOMER_SERVICE_URL: http://localhost:8003
+      APP_SECRET: dev-secret-change-me
+    volumes:
+      - .:/app
+      - /app/node_modules
