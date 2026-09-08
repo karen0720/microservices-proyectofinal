@@ -13,7 +13,7 @@ const EMPTY_SHOPPING = { cart: [], wishlist: [], orders: [] };
 const fetchShopping = async (authorization) => {
     try {
         const res = await fetchJson(
-            `${SHOPPING_URL}/customer/shopping-details`,
+            `${SHOPPING_URL}/shopping-details`,
             authorization
         );
 

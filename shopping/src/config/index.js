@@ -3,15 +3,18 @@ require('dotenv').config({ quiet: true });
 const config = {
     PORT: process.env.PORT || 8004,
     DB_URL: process.env.DB_URL,
-    CUSTOMER_SERVICE_URL: process.env.CUSTOMER_SERVICE_URL || 'http://localhost:8003',
+    PRODUCTS_SERVICE_URL: process.env.PRODUCTS_SERVICE_URL,
     APP_SECRET: process.env.APP_SECRET
 };
 
 config.requireVars = (...names) => {
     const missing = names.filter((name) => !config[name]);
 
-    if (missing.length) {
-        console.error(`missing required env vars: ${missing.join(', ')}`);
+    if (missing.length > 0) {
+        console.error(
+            `Missing required environment variables: ${missing.join(', ')}`
+        );
+
         process.exit(1);
     }
 };

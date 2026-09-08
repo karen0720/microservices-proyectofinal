@@ -4,7 +4,7 @@ const { databaseConnection } = require('./src/database');
 const expressApp = require('./src/express-app');
 
 const StartServer = async () => {
-    requireVars('DB_URL', 'APP_SECRET');
+    requireVars('DB_URL', 'APP_SECRET', 'PRODUCTS_SERVICE_URL');
 
     const app = express();
 

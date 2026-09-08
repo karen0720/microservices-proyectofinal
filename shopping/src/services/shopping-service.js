@@ -1,16 +1,19 @@
 const mongoose = require('mongoose');
 const { ShoppingRepository } = require('../database');
+const ProductsClient = require('../clients/products-client');
 const { FormateData } = require('../utils');
 const { APIError, BadRequestError } = require('../utils/app-errors');
 
 class ShoppingService {
     constructor() {
         this.repository = new ShoppingRepository();
+        this.productsClient = new ProductsClient();
     }
 
     async GetCart(customerId) {
         try {
             const cart = await this.repository.GetCart(customerId);
+
             return FormateData(cart);
         } catch (err) {
             if (err instanceof APIError) throw err;
@@ -25,15 +28,19 @@ class ShoppingService {
 
     async AddToCart(customerId, product, qty) {
         try {
-            if (!product || qty === undefined) {
+            if (!product || !product._id || qty === undefined) {
                 throw new BadRequestError(
-                    'Product and quantity are required'
+                    'Product id and quantity are required'
                 );
             }
 
+            const productData = await this.productsClient.GetProduct(
+                product._id
+            );
+
             const cart = await this.repository.AddToCart(
                 customerId,
-                product,
+                productData,
                 qty
             );
 
@@ -88,15 +95,19 @@ class ShoppingService {
 
     async AddToWishlist(customerId, product) {
         try {
-            if (!product) {
+            if (!product || !product._id) {
                 throw new BadRequestError(
-                    'Product is required'
+                    'Product id is required'
                 );
             }
 
+            const productData = await this.productsClient.GetProduct(
+                product._id
+            );
+
             const wishlist = await this.repository.AddToWishlist(
                 customerId,
-                product
+                productData
             );
 
             return FormateData(wishlist);
