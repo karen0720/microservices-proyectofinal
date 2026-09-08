@@ -1,12 +1,21 @@
-const { CustomerRepository } = require('../database');
+const {
+    CustomerRepository
+} = require('../database');
+
 const {
     FormateData,
-    GeneratePassword,
     GenerateSalt,
+    GeneratePassword,
     GenerateSignature,
     ValidatePassword
 } = require('../utils');
-const { APIError, BadRequestError } = require('../utils/app-errors');
+
+const {
+    APIError,
+    BadRequestError,
+    NotFoundError,
+    ValidationError
+} = require('../utils/app-errors');
 
 class CustomerService {
     constructor() {
@@ -14,57 +23,29 @@ class CustomerService {
     }
 
     async SignIn(userInputs) {
-        const { email, password } = userInputs;
-
         try {
-            const existingCustomer = await this.repository.FindCustomer({ email });
+            const { email, password } = userInputs;
 
-            if (existingCustomer) {
-                const validPassword = await ValidatePassword(
-                    password,
-                    existingCustomer.password,
-                    existingCustomer.salt
+            const existingCustomer =
+                await this.repository.FindCustomer({ email });
+
+            if (!existingCustomer) {
+                throw new NotFoundError(
+                    'Customer not found'
                 );
-
-                if (validPassword) {
-                    const token = await GenerateSignature({
-                        email: existingCustomer.email,
-                        _id: existingCustomer._id
-                    });
-
-                    return FormateData({
-                        id: existingCustomer._id,
-                        token
-                    });
-                }
             }
 
-            throw new BadRequestError('Invalid credentials');
-
-        } catch (err) {
-            if (err instanceof APIError) throw err;
-
-            throw new APIError(
-                'SignInError',
-                500,
-                err.message
+            const validPassword = await ValidatePassword(
+                password,
+                existingCustomer.password,
+                existingCustomer.salt
             );
-        }
-    }
 
-    async SignUp(userInputs) {
-        const { email, password, phone } = userInputs;
-
-        try {
-            const salt = await GenerateSalt();
-            const hashedPassword = await GeneratePassword(password, salt);
-
-            const existingCustomer = await this.repository.CreateCustomer({
-                email,
-                password: hashedPassword,
-                phone,
-                salt
-            });
+            if (!validPassword) {
+                throw new BadRequestError(
+                    'Invalid password'
+                );
+            }
 
             const token = await GenerateSignature({
                 email: existingCustomer.email,
@@ -75,9 +56,52 @@ class CustomerService {
                 id: existingCustomer._id,
                 token
             });
-
         } catch (err) {
-            if (err instanceof APIError) throw err;
+            if (err instanceof APIError) {
+                throw err;
+            }
+
+            throw new APIError(
+                'SignInError',
+                500,
+                err.message
+            );
+        }
+    }
+
+    async SignUp(userInputs) {
+        try {
+            const { email, password, phone } = userInputs;
+
+            const salt = await GenerateSalt();
+
+            const hashedPassword =
+                await GeneratePassword(
+                    password,
+                    salt
+                );
+
+            const customer =
+                await this.repository.CreateCustomer({
+                    email,
+                    password: hashedPassword,
+                    phone,
+                    salt
+                });
+
+            const token = await GenerateSignature({
+                email: customer.email,
+                _id: customer._id
+            });
+
+            return FormateData({
+                id: customer._id,
+                token
+            });
+        } catch (err) {
+            if (err instanceof APIError) {
+                throw err;
+            }
 
             throw new APIError(
                 'SignUpError',
@@ -87,185 +111,58 @@ class CustomerService {
         }
     }
 
-    async AddNewAddress(
-        _id,
-        { street, postalCode, city, country }
-    ) {
+    async AddNewAddress(customerId, address) {
         try {
-            const address = await this.repository.AddNewAddress(
-                _id,
-                {
-                    street,
-                    postalCode,
-                    city,
-                    country
-                }
-            );
+            if (!address) {
+                throw new ValidationError(
+                    'Address is required'
+                );
+            }
 
-            return FormateData(address);
+            const savedAddress =
+                await this.repository.AddNewAddress(
+                    customerId,
+                    address
+                );
 
+            return FormateData(savedAddress);
         } catch (err) {
+            if (err instanceof APIError) {
+                throw err;
+            }
+
             throw new APIError(
-                'Data Not Found',
-                404,
+                'AddAddressError',
+                500,
                 err.message
             );
         }
     }
 
-    async GetProfile({ _id }) {
+    async GetProfile(customerId) {
         try {
-            const profile = await this.repository.GetProfile(_id);
+            const id =
+                typeof customerId === 'object'
+                    ? customerId._id
+                    : customerId;
+
+            const profile =
+                await this.repository.GetProfile(id);
+
+            if (!profile) {
+                throw new NotFoundError(
+                    'Customer not found'
+                );
+            }
 
             return FormateData(profile);
-
         } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async GetShopingDetails(_id) {
-        try {
-            const profile = await this.repository.GetProfile(_id);
-
-            return FormateData({
-                cart: profile.cart,
-                wishlist: profile.wishlist,
-                orders: profile.orders
-            });
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async GetWishList(_id) {
-        try {
-            const wishlist = await this.repository.GetWishList(_id);
-
-            return FormateData(wishlist);
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async AddToWishlist(_id, product) {
-        try {
-            const wishlist = await this.repository.AddToWishlist(
-                _id,
-                product
-            );
-
-            return FormateData(wishlist);
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async RemoveFromWishlist(_id, productId) {
-        try {
-            const wishlist = await this.repository.RemoveFromWishlist(
-                _id,
-                productId
-            );
-
-            return FormateData(wishlist);
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async AddToCart(_id, product, qty) {
-        try {
-            const cart = await this.repository.AddToCart(
-                _id,
-                product,
-                qty
-            );
-
-            return FormateData(cart);
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async RemoveFromCart(_id, productId) {
-        try {
-            const cart = await this.repository.RemoveFromCart(
-                _id,
-                productId
-            );
-
-            return FormateData(cart);
-
-        } catch (err) {
-            throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async GetCart(_id) {
-        try {
-            const cart = await this.repository.GetCart(_id);
-
-            return FormateData(cart);
-
-        } catch (err) {
-            if (err instanceof APIError) throw err;
+            if (err instanceof APIError) {
+                throw err;
+            }
 
             throw new APIError(
-                'Data Not Found',
-                404,
-                err.message
-            );
-        }
-    }
-
-    async PlaceOrder(_id, order) {
-        try {
-            const placedOrder = await this.repository.PlaceOrder(
-                _id,
-                order
-            );
-
-            return FormateData(placedOrder);
-
-        } catch (err) {
-            if (err instanceof APIError) throw err;
-
-            throw new APIError(
-                'PlaceOrderError',
+                'GetProfileError',
                 500,
                 err.message
             );
