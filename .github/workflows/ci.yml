@@ -20,6 +20,17 @@ jobs:
           - products
           - shopping
 
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     defaults:
       run:
         working-directory: ${{ matrix.service }}
@@ -37,4 +48,6 @@ jobs:
         run: npm ci
 
       - name: Run tests
+        env:
+          TEST_DB_URL: mongodb://127.0.0.1:27017/shopping_test
         run: npm test
