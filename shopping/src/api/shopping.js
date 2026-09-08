@@ -1,31 +1,117 @@
 const ShoppingService = require('../services/shopping-service');
+const UserAuth = require('./middlewares/auth');
 
 module.exports = (app) => {
-
     const service = new ShoppingService();
 
-    app.post('/shopping/order', async (req, res, next) => {
+    app.get('/cart', UserAuth, async (req, res, next) => {
         try {
-            const authHeader = req.headers.authorization;
+            const { _id } = req.user;
+            const { data } = await service.GetCart(_id);
 
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    message: 'Missing authorization token'
-                });
-            }
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
 
-            const token = authHeader.split(' ')[1];
+    app.post('/cart', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { product, qty } = req.body;
 
-            const { txnId } = req.body;
+            const { data } = await service.AddToCart(_id, product, qty);
 
-            const { data } = await service.PlaceOrder(
-                null,
-                txnId,
-                token
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.delete('/cart/:productId', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+
+            const { data } = await service.RemoveFromCart(
+                _id,
+                req.params.productId
             );
 
             return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
 
+    app.get('/wishlist', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetWishlist(_id);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/wishlist', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { product } = req.body;
+
+            const { data } = await service.AddToWishlist(_id, product);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.delete('/wishlist/:productId', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+
+            const { data } = await service.RemoveFromWishlist(
+                _id,
+                req.params.productId
+            );
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.get('/shopping-details', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetShoppingDetails(_id);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.get('/orders', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { data } = await service.GetOrders(_id);
+
+            return res.json(data);
+        } catch (err) {
+            next(err);
+        }
+    });
+
+    app.post('/shopping/order', UserAuth, async (req, res, next) => {
+        try {
+            const { _id } = req.user;
+            const { txnId } = req.body;
+
+            const { data } = await service.PlaceOrder(_id, txnId);
+
+            return res.json(data);
         } catch (err) {
             next(err);
         }

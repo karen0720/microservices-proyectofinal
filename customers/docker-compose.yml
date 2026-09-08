@@ -13,6 +13,9 @@ services:
       - /app/node_modules
     depends_on:
       - customers-db
+    networks:
+      - microservices
+      - default
 
   customers-db:
     container_name: c-customers-db
@@ -24,3 +27,7 @@ services:
 
 volumes:
   customers-data:
+
+networks:
+  microservices:
+    external: true

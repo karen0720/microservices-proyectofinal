@@ -8,8 +8,12 @@ services:
       - "8000:8000"
     environment:
       PORT: 8000
-      CUSTOMERS_URL: ${CUSTOMERS_URL:-http://host.docker.internal:8003}
-      PRODUCTS_URL: ${PRODUCTS_URL:-http://host.docker.internal:8002}
-      SHOPPING_URL: ${SHOPPING_URL:-http://host.docker.internal:8004}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      CUSTOMERS_URL: http://c-customers:8003
+      PRODUCTS_URL: http://c-products:8002
+      SHOPPING_URL: http://c-shopping:8004
+    networks:
+      - microservices
+
+networks:
+  microservices:
+    external: true

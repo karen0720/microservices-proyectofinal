@@ -1,6 +1,6 @@
 services:
   products:
-    container_name:  c-products
+    container_name: c-products
     build: .
     ports:
       - "8002:8002"
@@ -12,6 +12,9 @@ services:
       - /app/node_modules
     depends_on:
       - products-db
+    networks:
+      - microservices
+      - default
 
   products-db:
     container_name: c-products-db
@@ -23,3 +26,7 @@ services:
 
 volumes:
   products-data:
+
+networks:
+  microservices:
+    external: true
