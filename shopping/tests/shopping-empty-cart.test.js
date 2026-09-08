@@ -1,7 +1,16 @@
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('../src/database', () => {
+    const mockRepository = {
+        GetCart: jest.fn()
+    };
+
+    return {
+        ShoppingRepository: jest.fn(() => mockRepository),
+        __mockRepository: mockRepository
+    };
+});
 
 const ShoppingService = require('../src/services/shopping-service');
+const { __mockRepository } = require('../src/database');
 
 describe('Shopping - PlaceOrder', () => {
     beforeEach(() => {
@@ -9,29 +18,18 @@ describe('Shopping - PlaceOrder', () => {
     });
 
     test('debe rechazar la orden cuando el carrito está vacío', async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => []
-        });
+        __mockRepository.GetCart.mockResolvedValue([]);
 
         const service = new ShoppingService();
 
         await expect(
-            service.PlaceOrder('customer-123', 'txn-123', 'token-123')
+            service.PlaceOrder('customer-123', 'txn-123')
         ).rejects.toMatchObject({
             message: 'Cart is empty'
         });
 
-        expect(mockFetch).toHaveBeenCalledTimes(1);
-
-        expect(mockFetch).toHaveBeenCalledWith(
-            expect.stringContaining('/customer/cart'),
-            expect.objectContaining({
-                method: 'GET',
-                headers: {
-                    Authorization: 'Bearer token-123'
-                }
-            })
+        expect(__mockRepository.GetCart).toHaveBeenCalledWith(
+            'customer-123'
         );
     });
 });

@@ -1,22 +1,24 @@
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('../src/database', () => {
+    const mockRepository = {
+        GetCart: jest.fn(),
+        PlaceOrder: jest.fn()
+    };
 
-jest.mock('mongoose', () => ({
-    Types: {
-        ObjectId: jest.fn(() => ({
-            toString: () => 'order-123'
-        }))
-    }
-}));
+    return {
+        ShoppingRepository: jest.fn(() => mockRepository),
+        __mockRepository: mockRepository
+    };
+});
 
 const ShoppingService = require('../src/services/shopping-service');
+const { __mockRepository } = require('../src/database');
 
 describe('Shopping - PlaceOrder exitoso', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    test('debe calcular el total y enviar la orden al servicio Customers', async () => {
+    test('debe calcular el total y guardar la orden mediante el repository', async () => {
         const cart = [
             {
                 product: {
@@ -38,60 +40,37 @@ describe('Shopping - PlaceOrder exitoso', () => {
 
         const savedOrder = {
             _id: 'order-123',
+            customerId: 'customer-123',
             amount: 250,
             txnId: 'txn-123',
             status: 'received',
             items: cart
         };
 
-        mockFetch
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => cart
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => savedOrder
-            });
+        __mockRepository.GetCart.mockResolvedValue(cart);
+        __mockRepository.PlaceOrder.mockResolvedValue(savedOrder);
 
         const service = new ShoppingService();
 
         const result = await service.PlaceOrder(
             'customer-123',
-            'txn-123',
-            'token-123'
+            'txn-123'
         );
 
-        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(__mockRepository.GetCart).toHaveBeenCalledWith(
+            'customer-123'
+        );
 
-        expect(mockFetch).toHaveBeenNthCalledWith(
-            1,
-            expect.stringContaining('/customer/cart'),
+        expect(__mockRepository.PlaceOrder).toHaveBeenCalledWith(
+            'customer-123',
             expect.objectContaining({
-                method: 'GET'
+                customerId: 'customer-123',
+                amount: 250,
+                txnId: 'txn-123',
+                status: 'received',
+                items: cart
             })
         );
-
-        expect(mockFetch).toHaveBeenNthCalledWith(
-            2,
-            expect.stringContaining('/customer/order'),
-            expect.objectContaining({
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: 'Bearer token-123'
-                }
-            })
-        );
-
-        const secondCallOptions = mockFetch.mock.calls[1][1];
-        const sentBody = JSON.parse(secondCallOptions.body);
-
-        expect(sentBody.order._id).toBe('order-123');
-        expect(sentBody.order.amount).toBe(250);
-        expect(sentBody.order.txnId).toBe('txn-123');
-        expect(sentBody.order.status).toBe('received');
-        expect(sentBody.order.items).toEqual(cart);
 
         expect(result).toEqual({
             data: savedOrder

@@ -1,48 +1,39 @@
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
+jest.mock('../src/database', () => {
+    const mockRepository = {
+        GetCart: jest.fn()
+    };
+
+    return {
+        ShoppingRepository: jest.fn(() => mockRepository),
+        __mockRepository: mockRepository
+    };
+});
 
 const ShoppingService = require('../src/services/shopping-service');
+const { __mockRepository } = require('../src/database');
 
-describe('Shopping - Error del servicio Customers', () => {
+describe('Shopping - Error del repository', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    test('debe lanzar error cuando Customers rechaza la orden', async () => {
-        const cart = [
-            {
-                product: {
-                    _id: 'product-1',
-                    name: 'Auto Toyota',
-                    price: 100
-                },
-                unit: 1
-            }
-        ];
-
-        mockFetch
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => cart
-            })
-            .mockResolvedValueOnce({
-                ok: false,
-                status: 400,
-                json: async () => ({
-                    message: 'Customer not found'
-                })
-            });
+    test('debe propagar el error cuando falla el repository', async () => {
+        __mockRepository.GetCart.mockRejectedValue(
+            new Error('Database error')
+        );
 
         const service = new ShoppingService();
 
         await expect(
-            service.PlaceOrder('customer-123', 'txn-123', 'token-123')
+            service.PlaceOrder('customer-123', 'txn-123')
         ).rejects.toMatchObject({
-            name: 'CustomerServiceError',
-            statusCode: 400,
-            message: 'Customer not found'
+            name: 'PlaceOrderError',
+            statusCode: 500,
+            message: 'Database error'
         });
 
-        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(__mockRepository.GetCart).toHaveBeenCalledWith(
+            'customer-123'
+        );
     });
 });
