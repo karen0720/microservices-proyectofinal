@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "seed": "node src/database/seed/run-seed.js"
-  },
+  "start": "node index.js",
+  "seed": "node src/database/seed/run-seed.js",
+  "test": "jest --runInBand"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -14,5 +15,8 @@
     "express": "^5.2.1",
     "mongoose": "^9.9.3"
   },
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "jest": "^30.5.1"
+  }
 }
